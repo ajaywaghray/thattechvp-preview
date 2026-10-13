@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex"><title>Tech VP Bingo</title>
+<meta name="description" content="Play Tech VP Bingo while the all-hands plays. Tap the buzzwords. Get a line. Share your time.">
+<meta name="theme-color" content="#0d0d0c">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;600&display=swap">
+<link rel="stylesheet" href="../assets/brand.css">
+<style>
+body{background:var(--black);color:var(--cream);min-height:100svh;display:flex;flex-direction:column}
+.top{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #efe8dc22}
+.top a{text-decoration:none}
+.top .back{font-size:.62rem;letter-spacing:.28em;text-transform:uppercase;font-weight:300}
+.game{width:min(560px,100%);margin:0 auto;padding:18px 12px 24px;flex:1;display:flex;flex-direction:column;gap:14px}
+.title{text-align:center}
+.title h1{font-size:clamp(2.6rem,13vw,4rem)}
+.title .tagline{display:block;margin-top:8px;font-size:.6rem;opacity:.75}
+.bar{display:flex;justify-content:space-between;align-items:center;font-size:.62rem;letter-spacing:.28em;text-transform:uppercase;font-weight:300;padding:0 2px}
+#timer{font-family:var(--display);font-size:1.5rem;letter-spacing:.04em;font-weight:400}
+.card{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:var(--black);padding:4px;border:1px solid #efe8dc33}
+.sq{aspect-ratio:1;border:0;background:var(--cream);color:var(--black);font-family:var(--body);font-weight:600;font-size:clamp(.5rem,2.35vw,.78rem);line-height:1.1;text-transform:uppercase;letter-spacing:.02em;padding:3px;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer;word-break:normal;overflow-wrap:anywhere;hyphens:auto;-webkit-tap-highlight-color:transparent;transition:background .12s,transform .08s;touch-action:manipulation}
+.sq:active{transform:scale(.95)}
+.sq.on{background:var(--black);color:var(--cream);box-shadow:inset 0 0 0 2px var(--wood)}
+.sq.free{background:repeating-linear-gradient(90deg,#c9a97c 0 7px,#b08d5f 7px 8px);color:var(--black);font-family:var(--display);font-weight:400;font-size:clamp(.9rem,4.5vw,1.3rem);cursor:default}
+.sq.win{background:var(--wood);color:var(--black);box-shadow:none}
+.actions{display:flex;gap:10px;justify-content:center}
+.hint{text-align:center;font-size:.72rem;font-weight:300;opacity:.6}
+/* celebration */
+#win{position:fixed;inset:0;background:var(--cream);color:var(--black);display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;z-index:10;text-align:center;overflow:auto}
+#win.show{display:flex;animation:pop .35s ease-out}
+@keyframes pop{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:none}}
+#win h2{font-size:clamp(4rem,24vw,8rem);line-height:.9}
+#win .tagline{font-size:.62rem}
+#preview{width:min(240px,60vw);box-shadow:0 12px 30px #0003;border:1px solid #0001}
+#win .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.wood-strip{position:fixed;left:0;right:0;bottom:0;height:6px}
+</style></head>
+<body>
+<header class="top"><a class="logo" href="../">TECH VP<span>™</span></a><a class="back" href="../">← Home</a></header>
+<main class="game">
+  <div class="title"><h1>Tech VP Bingo</h1><span class="tagline">Listen · Tap · Align</span></div>
+  <div class="bar"><span>Time</span><span id="timer">0:00</span><span id="status">Tap to start</span></div>
+  <div class="card" id="card" role="grid" aria-label="Bingo card"></div>
+  <div class="actions"><button class="button outline" id="newCard" style="color:var(--cream);border-color:var(--cream)">New card</button></div>
+  <p class="hint">Tap a buzzword when Tech VP says it. Five in a row, column or diagonal wins.</p>
+</main>
+<div class="wood-strip wood"></div>
+<section id="win" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+  <span class="tagline">Synergy achieved</span>
+  <h2 id="winTitle">BINGO!</h2>
+  <p id="winText" style="font-weight:300">You got Tech VP bingo.</p>
+  <img id="preview" alt="Shareable Tech VP bingo result">
+  <div class="row"><button class="button" id="share">Share</button><a class="button outline" id="download" download="tech-vp-bingo.png">Download</a></div>
+  <div class="row"><button class="button outline" id="again">New card</button><button class="button outline" id="keep">Keep playing</button></div>
+</section>
+<script>
+(() => {
+const FALLBACK=["AI-native","Synergy","North star","Circle back","10x","Agentic","Roadmap","OKRs","Bandwidth","Low-hanging fruit","Move the needle","Cursor","Copilot","LLM","Let's take this offline","Leverage","Deep dive","Align","Unblock","Flywheel","Learnings","Scale","Pivot","Moat","Net-net"];
+const LINES=[];for(let i=0;i<5;i++){LINES.push([0,1,2,3,4].map(j=>i*5+j));LINES.push([0,1,2,3,4].map(j=>j*5+i));}
+LINES.push([0,6,12,18,24],[4,8,12,16,20]);
+const $=id=>document.getElementById(id);
+let words=FALLBACK,marked,start=null,tick=null,won=false,blob=null,elapsed=0;
+const fmt=s=>Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=crypto.getRandomValues(new Uint32Array(1))[0]%(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+function newCard(){
+  clearInterval(tick);start=null;won=false;elapsed=0;$("timer").textContent="0:00";$("status").textContent="Tap to start";
+  const pick=shuffle([...new Set(words)]).slice(0,24);pick.splice(12,0,null);
+  marked=new Array(25).fill(false);marked[12]=true;
+  const card=$("card");card.innerHTML="";
+  pick.forEach((w,i)=>{const b=document.createElement("button");b.className="sq"+(i===12?" free on":"");b.dataset.i=i;
+    b.textContent=i===12?"FREE":w;b.setAttribute("aria-pressed",i===12);if(i===12)b.disabled=true;
+    b.addEventListener("click",()=>toggle(i,b));card.appendChild(b);});
+  $("win").classList.remove("show");
+}
+function toggle(i,b){
+  if(start===null){start=Date.now();$("status").textContent="Listening…";tick=setInterval(()=>{elapsed=Math.floor((Date.now()-start)/1000);$("timer").textContent=fmt(elapsed);},250);}
+  marked[i]=!marked[i];b.classList.toggle("on",marked[i]);b.setAttribute("aria-pressed",marked[i]);
+  if(navigator.vibrate)navigator.vibrate(10);
+  if(!won){const line=LINES.find(l=>l.every(k=>marked[k]));if(line)bingo(line);}
+}
+function bingo(line){
+  won=true;clearInterval(tick);elapsed=Math.max(1,Math.round((Date.now()-start)/1000));$("timer").textContent=fmt(elapsed);$("status").textContent="Bingo";
+  const sqs=$("card").children;line.forEach(k=>sqs[k].classList.add("win"));
+  const t=elapsed<60?elapsed+"s":fmt(elapsed);
+  $("winText").textContent="You got Tech VP bingo in "+t+".";
+  const words=line.filter(k=>k!==12).map(k=>sqs[k].textContent);
+  drawShare(t,words).then(()=>{setTimeout(()=>$("win").classList.add("show"),450);});
+  window.__bingo={time:t,line};
+}
+async function drawShare(t,lineWords){
+  try{await document.fonts.load("120px Anton");await document.fonts.load("300 30px Inter");}catch(e){}
+  const W=1080,H=1920,c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d");
+  x.fillStyle="#0d0d0c";x.fillRect(0,0,W,H);
+  for(let px=0;px<W;px+=24){x.fillStyle=(px/24)%2?"#b08d5f":"#c9a97c";x.fillRect(px,H-90,22,90);}
+  x.fillStyle="#efe8dc";x.fillRect(80,180,W-160,260);
+  x.fillStyle="#0d0d0c";x.textAlign="center";x.font="150px Anton, Impact, sans-serif";x.fillText("TECH VP",W/2,375);
+  const spaced=(s,y,size,col)=>{x.fillStyle=col;x.font="300 "+size+"px Inter, sans-serif";if("letterSpacing" in x)x.letterSpacing=(size*.32)+"px";x.fillText(s,W/2,y);if("letterSpacing" in x)x.letterSpacing="0px";};
+  spaced("BUILD · BUZZWORD · BINGO",560,30,"#efe8dc");
+  x.fillStyle="#efe8dc";x.font="300px Anton, Impact, sans-serif";x.fillText("BINGO",W/2,900);
+  spaced("I GOT TECH VP BINGO IN",1030,34,"#efe8dc");
+  x.fillStyle="#c9a97c";x.font="260px Anton, Impact, sans-serif";x.fillText(t.toUpperCase(),W/2,1300);
+  x.fillStyle="#efe8dc";x.fillRect(W/2-60,1370,120,2);
+  x.font="600 34px Inter, sans-serif";x.fillStyle="#efe8dc";
+  lineWords.slice(0,4).forEach((w,i)=>x.fillText(w.toUpperCase(),W/2,1450+i*56));
+  spaced("@THATTECHVP",1760,38,"#efe8dc");
+  const url=c.toDataURL("image/png");$("preview").src=url;$("download").href=url;
+  blob=await new Promise(r=>c.toBlob(r,"image/png"));
+}
+$("share").addEventListener("click",async()=>{
+  const text=$("winText").textContent.replace("You","I")+" @thattechvp";
+  const file=blob&&new File([blob],"tech-vp-bingo.png",{type:"image/png"});
+  try{
+    if(file&&navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text});return;}
+    if(navigator.share){await navigator.share({text,url:location.href});return;}
+  }catch(e){if(e.name==="AbortError")return;}
+  $("download").click();
+});
+$("newCard").addEventListener("click",newCard);$("again").addEventListener("click",newCard);
+$("keep").addEventListener("click",()=>$("win").classList.remove("show"));
+window.__tvp={newCard,toggle:i=>toggle(i,$("card").children[i])};
+fetch("../data/buzzwords.json").then(r=>r.json()).then(w=>{if(Array.isArray(w)&&w.length>=24)words=w;}).catch(()=>{}).finally(newCard);
+})();
+</script>
+</body></html>
