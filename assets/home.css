@@ -21,8 +21,8 @@ nav a:hover{text-decoration:underline}
 .results::after{content:"";position:absolute;right:0;top:0;bottom:0;width:22px;background:repeating-linear-gradient(90deg,#c9a97c 0 8px,#a8865a 8px 10px)}
 .section-top{display:flex;justify-content:space-between;gap:20px;padding-bottom:18px;border-bottom:1px solid currentColor;margin-bottom:46px;flex-wrap:wrap;opacity:.9}
 .micro{opacity:.7;letter-spacing:.22em}
-.metrics{display:grid;grid-template-columns:1fr 1fr;gap:40px}
-.metrics strong{font-family:var(--display);font-weight:400;font-size:clamp(3.2rem,9vw,7.5rem);line-height:1;display:block}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:40px}
+.metrics strong{font-family:var(--display);font-weight:400;font-size:clamp(3.2rem,8vw,7.5rem);line-height:1;display:block}
 .metrics strong span{font-size:.4em;color:var(--wood);margin-left:.15em;vertical-align:top}
 .metrics h2{font-family:var(--body);font-weight:300;font-size:.8rem;letter-spacing:.34em;margin-top:14px;padding-top:14px;border-top:1px solid #efe8dc44;width:min(260px,100%)}
 .fine{font-size:.74rem;opacity:.6;margin-top:40px;max-width:720px;font-weight:300}
